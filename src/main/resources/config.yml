@@ -1,0 +1,20 @@
+verification:
+  messages:
+    prompt_set_code: "&aset 4-digit code using /v set <code> &aand login using &c/v <code>"
+    usage_verify_set: "&cUsage: /v set <4-digit code>"
+    usage_verify: "&cUsage: /v <4-digit code>"
+    set_code_success: "&aRegistration successful! Your code is: %code%"
+    verify_success: "&aVerification successful!"
+    incorrect_code: "&cIncorrect code. Please try again."
+    cannot_move: "&cYou cannot move until you verify yourself."
+    only_players: "&cOnly players can use this command."
+    get_code_success: "&aThe verification code for %player% is: %code%"
+    player_not_found: "&cPlayer not found or no verification code set."
+    no_permission: "&cYou do not have permission to use this command."
+
+  codes:
+  # This section will store player UUIDs and their verification codes
+  # Example:
+  #   f84c6a790a8c48e09eeedca7236751dd: "1234"
+  #   another-uuid: "5678"
+  # The codes will be dynamically saved here

@@ -1,0 +1,21 @@
+name: VerifyPlugin
+version: '1.0'
+description: A Minecraft plugin for player verification using a 4-digit code.
+author: AyoSynk
+main: com.example.verifyplugin.VerifyPlugin
+api-version: '1.21'
+
+commands:
+  verify:
+    description: Set or verify your 4-digit code.
+    usage: /verify set <4-digit code> or /verify <4-digit code>
+    aliases: [v]
+  getcode:
+    description: Get the verification code of a player.
+    usage: /getcode <player>
+    permission: verifyplugin.getcode
+
+permissions:
+  verifyplugin.getcode:
+    description: Allows access to the /getcode command to retrieve player verification codes.
+    default: op

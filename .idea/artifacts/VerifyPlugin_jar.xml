@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="VerifyPlugin:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/VerifyPlugin_jar</output-path>
+    <root id="archive" name="VerifyPlugin.jar">
+      <element id="module-output" name="VerifyPlugin" />
+    </root>
+  </artifact>
+</component>
