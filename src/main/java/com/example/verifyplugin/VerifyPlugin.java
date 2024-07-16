@@ -2,9 +2,9 @@ package com.example.verifyplugin;
 
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -12,7 +12,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -20,19 +22,23 @@ import java.util.UUID;
 public class VerifyPlugin extends JavaPlugin implements Listener {
 
     private HashMap<UUID, Boolean> verifiedPlayers = new HashMap<>();
+    private HashMap<UUID, Location> lastLocations = new HashMap<>();
     private FileConfiguration config;
+    private VersionChecker versionChecker;
 
     @Override
     public void onEnable() {
         config = getConfig();
-        loadVerificationData(); // Load saved verification data from file
+        versionChecker = new VersionChecker(this);
+        versionChecker.checkVersion();
+        loadVerificationData();
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("VerifyPlugin has been enabled!");
     }
 
     @Override
     public void onDisable() {
-        saveVerificationData(); // Save verification data to file
+        saveVerificationData();
         getLogger().info("VerifyPlugin has been disabled!");
     }
 
@@ -42,17 +48,16 @@ public class VerifyPlugin extends JavaPlugin implements Listener {
         UUID uuid = player.getUniqueId();
 
         if (!config.contains("verification.codes." + uuid.toString())) {
-            // First-time join, prompt to set code
-            event.setJoinMessage(null);
-            player.teleport(player.getWorld().getSpawnLocation());
             player.sendMessage(formatMessage(config.getString("verification.messages.prompt_set_code")));
             makePlayerInvulnerable(player);
+            startPromptTask(player, true);
         } else {
-            // Subsequent join, prompt to verify
-            event.setJoinMessage(null);
-            player.teleport(player.getWorld().getSpawnLocation());
-            player.sendMessage(formatMessage(config.getString("verification.messages.prompt_set_code")));
+            player.sendMessage(formatMessage(config.getString("verification.messages.prompt_verify_code")));
             makePlayerInvulnerable(player);
+            startPromptTask(player, false);
+            if (lastLocations.containsKey(uuid)) {
+                player.teleport(lastLocations.get(uuid));
+            }
         }
     }
 
@@ -77,6 +82,13 @@ public class VerifyPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        UUID uuid = player.getUniqueId();
+        lastLocations.put(uuid, player.getLocation());
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (sender instanceof Player) {
@@ -85,18 +97,20 @@ public class VerifyPlugin extends JavaPlugin implements Listener {
 
             if (command.getName().equalsIgnoreCase("verify")) {
                 if (args.length == 2 && args[0].equalsIgnoreCase("set")) {
-                    // Register a new code
-                    if (args[1].length() == 4 && args[1].matches("\\d+")) {
-                        config.set("verification.codes." + uuid.toString(), args[1]);
-                        verifiedPlayers.put(uuid, true);
-                        saveConfig();
-                        player.sendMessage(formatMessage(config.getString("verification.messages.set_code_success").replace("%code%", args[1])));
-                        makePlayerVulnerable(player);
+                    if (!config.contains("verification.codes." + uuid.toString())) {
+                        if (args[1].length() == 4 && args[1].matches("\\d+")) {
+                            config.set("verification.codes." + uuid.toString(), args[1]);
+                            verifiedPlayers.put(uuid, true);
+                            saveConfig();
+                            player.sendMessage(formatMessage(config.getString("verification.messages.set_code_success").replace("%code%", args[1])));
+                            makePlayerVulnerable(player);
+                        } else {
+                            player.sendMessage(formatMessage(config.getString("verification.messages.usage_verify_set")));
+                        }
                     } else {
-                        player.sendMessage(formatMessage(config.getString("verification.messages.usage_verify_set")));
+                        player.sendMessage(formatMessage(config.getString("verification.messages.already_set_code")));
                     }
                 } else if (args.length == 1) {
-                    // Verify with existing code
                     if (config.getString("verification.codes." + uuid.toString()).equals(args[0])) {
                         verifiedPlayers.put(uuid, true);
                         player.sendMessage(formatMessage(config.getString("verification.messages.verify_success")));
@@ -125,7 +139,7 @@ public class VerifyPlugin extends JavaPlugin implements Listener {
                         sender.sendMessage(formatMessage(config.getString("verification.messages.player_not_found")));
                     }
                 } else {
-                    sender.sendMessage(formatMessage(config.getString("verification.messages.usage_verify")));
+                    sender.sendMessage(formatMessage(config.getString("verification.messages.usage_getcode")));
                 }
             } else {
                 sender.sendMessage(formatMessage(config.getString("verification.messages.no_permission")));
@@ -137,11 +151,11 @@ public class VerifyPlugin extends JavaPlugin implements Listener {
     }
 
     private void loadVerificationData() {
-        // Load verification codes directly from the config
+        // Load verification codes and last locations directly from the config
     }
 
     private void saveVerificationData() {
-        // Save verification codes directly to the config
+        // Save verification codes and last locations directly to the config
         saveConfig();
     }
 
@@ -151,11 +165,35 @@ public class VerifyPlugin extends JavaPlugin implements Listener {
 
     private void makePlayerInvulnerable(Player player) {
         player.setInvulnerable(true);
-        player.setGameMode(GameMode.SPECTATOR);
+        player.setGameMode(GameMode.ADVENTURE);
+        player.setAllowFlight(false);
+        player.setFlying(false);
+        player.setSprinting(false);
     }
 
     private void makePlayerVulnerable(Player player) {
         player.setInvulnerable(false);
         player.setGameMode(GameMode.SURVIVAL);
+        player.setAllowFlight(false);
+        player.setFlying(false);
+        player.setSprinting(true);
+        player.setWalkSpeed(0.2F);
+    }
+
+    private void startPromptTask(final Player player, final boolean isFirstTime) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!verifiedPlayers.containsKey(player.getUniqueId())) {
+                    if (isFirstTime) {
+                        player.sendMessage(formatMessage(config.getString("verification.messages.prompt_set_code")));
+                    } else {
+                        player.sendMessage(formatMessage(config.getString("verification.messages.prompt_verify_code")));
+                    }
+                } else {
+                    cancel();
+                }
+            }
+        }.runTaskTimer(this, 0, 100); // Send the message every 5 seconds (100 ticks)
     }
 }

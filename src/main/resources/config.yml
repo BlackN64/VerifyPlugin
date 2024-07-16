@@ -1,8 +1,9 @@
 verification:
   messages:
-    prompt_set_code: "&aset 4-digit code using /v set <code> &aand login using &c/v <code>"
-    usage_verify_set: "&cUsage: /v set <4-digit code>"
-    usage_verify: "&cUsage: /v <4-digit code>"
+    prompt_set_code: "&aset your 4-digit code using &c/verify set <code>."
+    prompt_verify_code: "&aPlease verify yourself using &c/verify <code>."
+    usage_verify_set: "&cUsage: /verify set <4-digit code>"
+    usage_verify: "&cUsage: /verify <4-digit code>"
     set_code_success: "&aRegistration successful! Your code is: %code%"
     verify_success: "&aVerification successful!"
     incorrect_code: "&cIncorrect code. Please try again."
@@ -11,6 +12,8 @@ verification:
     get_code_success: "&aThe verification code for %player% is: %code%"
     player_not_found: "&cPlayer not found or no verification code set."
     no_permission: "&cYou do not have permission to use this command."
+    already_set_code: "&cYou have already set a verification code. Use /verify <code> to verify."
+    new_version_available: "&aA new version of VerifyPlugin is available: &e%version% &a. Please visit %https://www.spigotmc.org/resources/verifyplugin.118077/% to download the latest version."
 
   codes:
   # This section will store player UUIDs and their verification codes
@@ -18,3 +21,10 @@ verification:
   #   f84c6a790a8c48e09eeedca7236751dd: "1234"
   #   another-uuid: "5678"
   # The codes will be dynamically saved here
+
+  locations:
+  # This section will store player UUIDs and their last known locations
+  # Example:
+  #   f84c6a790a8c48e09eeedca7236751dd: "world,100,64,200,0,0"
+  #   another-uuid: "world,-50,70,300,90,0"
+  # The locations will be dynamically saved here
